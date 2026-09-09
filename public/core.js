@@ -43,6 +43,15 @@
     if(o.type==='debts')x.remaining=round(Math.max(0,x.remaining-amount));
     return t;
   }
+  function settleOccurrences(s,items){
+    const latest=new Map();
+    for(const o of items||[]){if(!o||!o.type||!o.id)continue;const k=`${o.type}:${o.id}`;const prev=latest.get(k);if(!prev||o.date>prev.date)latest.set(k,o);}
+    for(const o of latest.values()){
+      if(o.type==='subscriptions'){const x=s.subscriptions.find(x=>x.id===o.id);if(!x||x.status!=='active')continue;let d=x.nextDate;for(let n=0;d<=o.date&&n<1200;n++)d=addMonths(d,x.cycle,x.anchorDay);x.nextDate=d;}
+      else if((o.type==='bills'||o.type==='debts')){const x=s[o.type].find(x=>x.id===o.id);if(x&&(!x.settledThrough||o.period>x.settledThrough))x.settledThrough=o.period;}
+    }
+    return s;
+  }
   function receiveSalary(s,m=month(),paidDate=today()){const amount=netSalary(s,m);return record(s,{kind:'income',name:'الراتب الصافي',amount,currency:s.salary.currency,date:paidDate,category:'salary',sourceType:'salary',sourceId:'salary',period:m,note:`راتب ${m} بعد الاستقطاعات`});}
   function cancelSubscription(s,id,when=today()){const x=s.subscriptions.find(x=>x.id===id);if(!x)return;x.status='cancelled';x.cancelledDate=when;x.cancelledNextDate=x.nextDate;x.cancelledAmount=x.amount;x.cancelledCurrency=x.currency;x.cancelledCycle=x.cycle;x.cancelledAnchorDay=x.anchorDay;}
   function savings(s,x,until=today()){if(x.status!=='cancelled')return 0;let d=x.cancelledNextDate||x.nextDate,n=0;for(let i=0;d<=until&&i<1200;i++,d=addMonths(d,x.cancelledCycle||x.cycle,x.cancelledAnchorDay||x.anchorDay)){if(d>=(x.cancelledDate||until))n++;}return convert(s,n*(x.cancelledAmount??x.amount),x.cancelledCurrency||x.currency);}
@@ -69,6 +78,6 @@
     receiveSalary(s,m,`${m}-01`);
     const general=[['مشتريات البيت',62.5],['قهوة ولقمة',7.25],['بنزين',30]];general.forEach(([name,amount],i)=>record(s,{name,amount,currency:'JOD',kind:'expense',category:'general',note:'بيانات تجريبية',date:addDays(now,-Math.min(Number(now.slice(8))-1,i))}));
     for(let i=1;i<=5;i++){const mm=month(addMonths(now,-i));for(const [cat,v] of Object.entries({subscriptions:52+i*2,bills:280+18*(i%3),debts:75,general:180+24*i}))record(s,{name:categoryNames[cat],amount:v,currency:'JOD',kind:'expense',category:cat,note:'بيانات تجريبية للمقارنة',date:`${mm}-15`});}return s;}
-  const api={currencies,categoryNames,today,month,date,validDate,dayDiff,addDays,addMonths,dueInMonth,uid,round,empty,convert,hasPaid,netSalary,occurrences,monthlyFixed,summary,record,pay,receiveSalary,cancelSubscription,savings,report,validate,demo};
+  const api={currencies,categoryNames,today,month,date,validDate,dayDiff,addDays,addMonths,dueInMonth,uid,round,empty,convert,hasPaid,netSalary,occurrences,monthlyFixed,summary,record,pay,settleOccurrences,receiveSalary,cancelSubscription,savings,report,validate,demo};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;root.Jeebtak=api;
 })(typeof window!=='undefined'?window:globalThis);

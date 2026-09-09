@@ -15,3 +15,6 @@ dialog{width:min(540px,calc(100% - 30px));border:1px solid var(--line);border-ra
 @media print{.sidebar,.topbar,.bottom-nav,.btn,.text-btn,.banner,.icon-button{display:none!important}.workspace{margin:0;padding:20px}.panel{break-inside:avoid}.page{animation:none}}
 .reminder-actions{display:flex;gap:8px;flex-shrink:0}
 @media(max-width:700px){.stat-label{font-size:12px}.stat-value{font-size:15px}.stat-value .money{flex-wrap:wrap;gap:0 3px}.stat-value .unit{font-size:10px}.item-name{font-size:14px}.item-meta{font-size:12px}.available-desc{font-size:12px}.available-label{font-size:13px}.available{grid-template-columns:minmax(0,1fr) auto}.available-value{font-size:25px}.available-bottom p{font-size:12px}.pocket-note{font-size:12px}.quick-action{font-size:12px}.bottom-nav a{font-size:11px}.list-item:has(.reminder-actions){flex-wrap:wrap}.reminder-actions{width:100%;padding-inline-start:53px}.reminder-actions .btn{flex:1}.summary-tile .label{font-size:12px}.banner{font-size:12px}}
+.bulk-settle-bar{margin-bottom:12px;gap:12px;align-items:center}
+.settle-pick{width:18px;height:18px;flex:none;margin-inline-end:6px;accent-color:var(--pine)}
+.list-item:has(.settle-pick){align-items:center}

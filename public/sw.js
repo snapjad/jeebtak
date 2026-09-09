@@ -1,6 +1,6 @@
 /* Only application assets are cached. Financial data stays in localStorage. */
 'use strict';
-const CACHE='jeebtak-app-v2';
+const CACHE='jeebtak-app-v3';
 const ASSETS=['./','./index.html','./styles.css','./core.js','./app.js','./manifest.json','./assets/wallet-hero.svg','./assets/subscriptions.svg','./assets/bills.svg','./assets/salary.svg','./assets/debt.svg','./assets/app-icon.svg','./assets/apple-touch-icon.png','./assets/icon-192.png','./assets/icon-512.png','./assets/readex-0.ttf','./assets/readex-1.ttf','./assets/readex-2.ttf','./assets/readex-3.ttf'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));});
 self.addEventListener('activate',event=>{event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('jeebtak-app-')&&k!==CACHE).map(k=>caches.delete(k)));await self.clients.claim();})());});
