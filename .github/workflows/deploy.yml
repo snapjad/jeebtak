@@ -1,8 +1,11 @@
 name: Deploy جيبتك to GitHub Pages
 
-# Every push to the working branch runs the tests and, if they pass,
-# publishes public/ to GitHub Pages.
-# One-time setup: repo Settings -> Pages -> Source: "GitHub Actions".
+# The test job runs on every push to the working branch.
+# The deploy job publishes public/ to GitHub Pages, but ONLY when the
+# repo variable DEPLOY_TO_PAGES is set to "true"
+# (repo Settings -> Secrets and variables -> Actions -> Variables).
+# GitHub Pages needs either a public repo or a GitHub Pro/Team plan for
+# a private one; until that is sorted the deploy job is skipped, not failed.
 on:
   push:
     branches: [jad/claude-edits]
@@ -32,6 +35,7 @@ jobs:
 
   deploy:
     needs: test
+    if: vars.DEPLOY_TO_PAGES == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -39,6 +43,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
