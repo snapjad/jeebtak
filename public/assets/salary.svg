@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100" fill="none">
+<defs><linearGradient id="a" x1="18" y1="42" x2="79" y2="84" gradientUnits="userSpaceOnUse"><stop stop-color="#E6ECD9"/><stop offset="1" stop-color="#90B29A"/></linearGradient><linearGradient id="b" x1="33" y1="19" x2="72" y2="54" gradientUnits="userSpaceOnUse"><stop stop-color="#4D8268"/><stop offset="1" stop-color="#194C40"/></linearGradient><linearGradient id="c" x1="56" y1="56" x2="86" y2="89" gradientUnits="userSpaceOnUse"><stop stop-color="#F2CCA0"/><stop offset="1" stop-color="#AE7042"/></linearGradient><filter id="s"><feGaussianBlur stdDeviation="3"/></filter></defs>
+<ellipse cx="53" cy="85" rx="34" ry="7" fill="#193C2B" opacity=".15" filter="url(#s)"/>
+<path d="m16 47 29-21c3-2 6-2 9 0l30 20-32 18-36-17Z" fill="#73977F"/><path d="m19 44 25-19c3-2 6-2 9 0l28 18-30 18-32-17Z" fill="#4E775C"/>
+<rect x="31" y="16" width="42" height="51" rx="5" transform="rotate(10 31 16)" fill="#0C3528"/><rect x="30" y="13" width="42" height="51" rx="5" transform="rotate(10 30 13)" fill="url(#b)"/><path d="m36 20 25 4c-1 3 0 5 3 6l-4 22c-3-1-5 1-6 3l-20-3c1-3-1-6-4-6l4-21c3 0 5-1 5-4" stroke="#95B891" stroke-opacity=".66" stroke-width="1"/>
+<circle cx="48" cy="37" r="10" fill="#A9C5A0" opacity=".6"/><path d="m43 35 4-4 3 1 3 6-4 5" stroke="#305F47" stroke-width="2" stroke-linecap="round"/>
+<path d="m16 44 33 17 35-18-1 32c0 5-3 8-8 8H25c-5 0-8-3-8-8l-1-31Z" fill="#74977C" transform="translate(0 3)"/><path d="m16 44 33 17 35-18-1 32c0 5-3 8-8 8H25c-5 0-8-3-8-8l-1-31Z" fill="url(#a)"/>
+<path d="m18 47 29 16c2 1 4 1 6 0l28-17M21 77l22-20m35 20L55 58" stroke="#EFF4DE" stroke-opacity=".75" stroke-width="1.1" stroke-linecap="round"/>
+<ellipse cx="74" cy="81" rx="15" ry="7" fill="#8E5735"/><path d="M59 74v7c0 4 7 7 15 7s15-3 15-7v-7H59Z" fill="#A66E42"/><path d="M62 80v5m5-4v6m6-5v5m6-6v5m6-7v5" stroke="#DBAB76" stroke-width="1"/><ellipse cx="74" cy="74" rx="15" ry="7" fill="url(#c)"/><ellipse cx="74" cy="74" rx="11.5" ry="4.8" stroke="#F9DFB3" stroke-width=".8"/><path d="m68 74 5-2 6 2-5 2-6-2Z" fill="#B0794B"/>
+</svg>
