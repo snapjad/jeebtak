@@ -18,3 +18,5 @@ dialog{width:min(540px,calc(100% - 30px));border:1px solid var(--line);border-ra
 .bulk-settle-bar{margin-bottom:12px;gap:12px;align-items:center}
 .settle-pick{width:18px;height:18px;flex:none;margin-inline-end:6px;accent-color:var(--pine)}
 .list-item:has(.settle-pick){align-items:center}
+
+.bank-details{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}.bank-details summary{cursor:pointer;min-height:44px;font-size:14px;display:list-item;list-style-position:inside}.bank-details .form-grid,.bank-details .detail-pairs{margin-top:16px}.bank-details .fine{margin-top:14px}.bank-details .check-field{margin-block:10px}

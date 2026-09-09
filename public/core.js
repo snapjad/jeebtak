@@ -20,10 +20,10 @@
   function occurrences(s,until=addDays(today(),14)){
     const out=[];
     for(const x of s.subscriptions.filter(x=>x.status==='active')){let due=x.nextDate;for(let n=0;due<=until&&n<1200;n++,due=addMonths(due,x.cycle,x.anchorDay)){if(!hasPaid(s,'subscriptions',x.id,due))out.push({type:'subscriptions',id:x.id,name:x.name,amount:x.amount,currency:x.currency,date:due,period:due,reminder:x.reminder});}}
-    for(const type of ['bills','debts']) for(const x of s[type].filter(x=>!x.archived&&(type!=='debts'||x.remaining>0))){const startMonth=month(x.startDate);let m=x.settledThrough&&x.settledThrough>startMonth?month(addMonths(`${x.settledThrough}-01`,1)):startMonth;let pending=0;for(let n=0;m<=month(until)&&n<1200;n++,m=month(addMonths(`${m}-01`,1))){const due=dueInMonth(m,x.dueDay);if(due<x.startDate||due>until||hasPaid(s,type,x.id,m)||(x.settledThrough&&m<=x.settledThrough))continue;const amount=type==='debts'?Math.min(x.installment,x.remaining-pending):x.amount;if(amount<=0)break;pending+=amount;out.push({type,id:x.id,name:x.name,amount,currency:x.currency,date:due,period:m,reminder:x.reminder});}}
+    for(const type of ['bills','debts']) for(const x of s[type].filter(x=>!x.archived&&(type!=='debts'||x.remaining>0))){const startMonth=month(x.startDate);let m=x.settledThrough&&x.settledThrough>startMonth?month(addMonths(`${x.settledThrough}-01`,1)):startMonth;let pending=0;for(let n=0;m<=month(until)&&n<1200;n++,m=month(addMonths(`${m}-01`,1))){const due=type==='debts'&&x.bank&&m===month(x.bank.endDate)?x.bank.endDate:dueInMonth(m,x.dueDay);if(type==='debts'&&x.bank&&due>x.bank.endDate)break;if(due<x.startDate||due>until||hasPaid(s,type,x.id,m)||(x.settledThrough&&m<=x.settledThrough))continue;const amount=type==='debts'?(x.bank?(m===month(x.bank.endDate)?x.bank.lastInstallment:x.installment):Math.min(x.installment,x.remaining-pending)):x.amount;if(amount<=0)break;pending+=amount;out.push({type,id:x.id,name:x.name,amount,currency:x.currency,date:due,period:m,reminder:x.reminder});}}
     return out.sort((a,b)=>a.date.localeCompare(b.date)||a.name.localeCompare(b.name));
   }
-  function monthlyFixed(s){return {subscriptions:s.subscriptions.filter(x=>x.status==='active').reduce((a,x)=>a+convert(s,x.amount/x.cycle,x.currency),0),bills:s.bills.filter(x=>!x.archived).reduce((a,x)=>a+convert(s,x.amount,x.currency),0),debts:s.debts.filter(x=>!x.archived&&x.remaining>0).reduce((a,x)=>a+convert(s,Math.min(x.installment,x.remaining),x.currency),0)};}
+  function monthlyFixed(s){return {subscriptions:s.subscriptions.filter(x=>x.status==='active').reduce((a,x)=>a+convert(s,x.amount/x.cycle,x.currency),0),bills:s.bills.filter(x=>!x.archived).reduce((a,x)=>a+convert(s,x.amount,x.currency),0),debts:s.debts.filter(x=>!x.archived&&x.remaining>0).reduce((a,x)=>a+convert(s,x.bank?x.installment:Math.min(x.installment,x.remaining),x.currency),0)};}
   function summary(s,m=month()){
     const actual=s.transactions.filter(t=>month(t.date)===m&&t.date<=today());
     const income=actual.filter(t=>t.kind==='income').reduce((a,t)=>a+convert(s,t.amount,t.currency),0);
@@ -34,13 +34,14 @@
     return {income,expense,balance,reserved,available:balance-reserved,fixed,totalFixed,net,ratio:net?totalFixed/net:0};
   }
   function record(s,t){if(t.sourceType&&hasPaid(s,t.sourceType,t.sourceId,t.period))throw new Error('هذه الدفعة مسجّلة بالفعل.');if(!Number.isFinite(t.amount)||t.amount<=0)throw new Error('أدخل مبلغاً أكبر من صفر.');if(!validDate(t.date)||t.date>today())throw new Error('تاريخ الدفع يجب أن يكون اليوم أو قبله.');if(!currencies.includes(t.currency))throw new Error('العملة غير مدعومة.');const entry={id:uid(),...t};s.transactions.unshift(entry);return entry;}
-  function pay(s,o,amount=o.amount,paidDate=today()){
+  function pay(s,o,amount=o.amount,paidDate=today(),remainingAfter){
     const x=s[o.type]?.find(x=>x.id===o.id);if(!x)throw new Error('هذا البند لم يعد موجوداً.');
-    if(o.type==='debts'&&amount>x.remaining)throw new Error('الدفعة أكبر من المبلغ المتبقي.');
+    if(o.type==='debts'&&!x.bank&&amount>x.remaining)throw new Error('الدفعة أكبر من المبلغ المتبقي.');
     if(o.type==='subscriptions'&&x.nextDate!==o.period)throw new Error('سدّد أقدم تجديد أولاً.');
+    if(o.type==='debts'&&x.bank&&(!Number.isFinite(remainingAfter)||remainingAfter<0||remainingAfter>x.remaining||x.remaining-remainingAfter>amount+0.000001))throw new Error('أدخل الرصيد بعد القسط حسب البنك. انخفاض الرصيد لا يتجاوز الدفعة.');
     const t=record(s,{kind:'expense',name:x.name,amount,currency:x.currency,date:paidDate,category:o.type,sourceType:o.type,sourceId:o.id,period:o.period,note:'دفعة مسجّلة من الاستحقاقات'});
     if(o.type==='subscriptions'){x.lastPaid=paidDate;x.nextDate=addMonths(x.nextDate,x.cycle,x.anchorDay);}
-    if(o.type==='debts')x.remaining=round(Math.max(0,x.remaining-amount));
+    if(o.type==='debts'){t.debtReduction=x.bank?round(x.remaining-remainingAfter):amount;x.remaining=x.bank?remainingAfter:round(Math.max(0,x.remaining-amount));}
     return t;
   }
   function settleOccurrences(s,items){
@@ -67,6 +68,8 @@
     for(const d of s.salary.deductions)if(!str(d.id)||!str(d.name)||!num(d.amount)||typeof d.recurring!=='boolean'||!validDate(`${d.month}-01`))fail();
     const ids=new Set();
     for(const type of ['subscriptions','bills','debts','transactions']){if(!Array.isArray(s[type])||s[type].length>25000)fail();for(const x of s[type]){if(!str(x.id)||!x.id||ids.has(x.id)||!str(x.name)||!curr(x.currency))fail();ids.add(x.id);if(type==='subscriptions'){if(!positive(x.amount)||![1,3,6,12].includes(x.cycle)||!validDate(x.nextDate)||!day(x.anchorDay)||!['active','paused','cancelled'].includes(x.status)||!rem(x.reminder)||!str(x.category)||!validDate(x.lastUsed)|| (x.lastPaid&&!validDate(x.lastPaid)) || (x.cancelledDate&&!validDate(x.cancelledDate)) || (x.cancelledNextDate&&!validDate(x.cancelledNextDate)) || (x.cancelledAmount!==undefined&&!num(x.cancelledAmount)) || (x.cancelledCurrency!==undefined&&!curr(x.cancelledCurrency)) || (x.cancelledCycle!==undefined&&![1,3,6,12].includes(x.cancelledCycle)) || (x.cancelledAnchorDay!==undefined&&!day(x.cancelledAnchorDay)))fail();}else if(type==='transactions'){if(!positive(x.amount)||!validDate(x.date)||!['income','expense'].includes(x.kind)||!(x.category in categoryNames)||!str(x.note||'')||x.sourceType&&(!['salary','subscriptions','bills','debts'].includes(x.sourceType)||!str(x.sourceId)||!str(x.period)))fail();}else {if(!validDate(x.startDate)||!day(x.dueDay)||!rem(x.reminder)||typeof x.archived!=='boolean')fail();if(x.settledThrough!==undefined&&!(str(x.settledThrough)&&/^\d{4}-\d{2}$/.test(x.settledThrough)&&validDate(`${x.settledThrough}-01`)))fail();if(type==='bills'&&!positive(x.amount))fail();if(type==='debts'&&(!positive(x.total)||!num(x.remaining)||x.remaining>x.total||!positive(x.installment)))fail();}}}
+    for(const x of s.debts){if(x.bank!==undefined){const b=x.bank;if(!b||typeof b!=='object'||!num(b.paidPercent)||b.paidPercent>100||!validDate(b.endDate)||b.endDate<x.startDate||!Number.isInteger(b.termMonths)||b.termMonths<1||b.termMonths>1200||!num(b.apr)||b.apr>100||!num(b.interest)||!num(b.fees)||!positive(b.lastInstallment))fail();}}
+    for(const t of s.transactions){if(t.debtReduction!==undefined&&(!num(t.debtReduction)||t.debtReduction>t.amount+0.000001||t.sourceType!=='debts'))fail();}
     if(s.settings.ratesDate&&!validDate(s.settings.ratesDate))fail();
     if(s.updatedAt&&(!str(s.updatedAt)||isNaN(new Date(s.updatedAt))))fail();
     const keys=new Set();for(const t of s.transactions.filter(t=>t.sourceType)){if(t.sourceType==='subscriptions'?!validDate(t.period):!validDate(`${t.period}-01`))fail();if(t.sourceType==='salary'?(t.sourceId!=='salary'||t.kind!=='income'):(!s[t.sourceType].some(x=>x.id===t.sourceId)||t.kind!=='expense'))fail();const key=[t.sourceType,t.sourceId,t.period].join(':');if(keys.has(key))fail();keys.add(key);}return s;
