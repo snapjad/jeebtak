@@ -1,0 +1,25 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const {DatabaseSync}=require('node:sqlite');
+const {webcrypto}=require('node:crypto');
+test('worker authenticates before storage, serialises competing revisions and rejects bad input',async()=>{
+  const {default:worker,Wallet}=await import('../sync-worker/worker.mjs');
+  const db=new DatabaseSync(':memory:');
+  const sql={exec:(query,...params)=>{const stmt=db.prepare(query);if(query.startsWith('SELECT'))return {toArray:()=>stmt.all(...params)};stmt.run(...params);return {toArray:()=>[]};}};
+  const wallet=new Wallet({storage:{sql}});let routed=0;
+  const token='a'.repeat(43),hash=Buffer.from(await webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(token))).toString('hex');
+  const env={ALLOWED_ORIGIN:'https://snapjad.github.io',SYNC_AUTH_HASH:hash,WALLET:{idFromName:()=>1,get:()=>({fetch:r=>{routed++;return wallet.fetch(r);}})}};
+  const call=(method='GET',body,auth=token,origin=env.ALLOWED_ORIGIN)=>worker.fetch(new Request('https://test.workers.dev/snapshot',{method,headers:{Origin:origin,Authorization:'Bearer '+auth,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)}),env);
+  assert.equal((await call('GET',undefined,'b'.repeat(43))).status,401);assert.equal(routed,0);
+  assert.equal((await call('GET',undefined,token,'https://evil.test')).status,403);assert.equal(routed,0);
+  assert.deepEqual(await (await call()).json(),{revision:0,box:null});
+  const body={revision:0,box:{v:1,iv:'a'.repeat(16),data:'b'.repeat(32)}};
+  const results=await Promise.all([call('PUT',body),call('PUT',body)]);assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
+  assert.equal((await (await call()).json()).revision,1);
+  assert.equal((await call('PUT',{...body,revision:-1})).status,400);
+  assert.equal((await call('PUT',{...body,box:{...body.box,iv:'bad'}})).status,400);
+  assert.equal((await call('PUT',{...body,box:{...body.box,data:'b'.repeat(1000001)}})).status,413);
+  for(let revision=1;revision<7;revision++)assert.equal((await call('PUT',{...body,revision})).status,200);
+  assert.equal(sql.exec('SELECT revision FROM snapshots').toArray().length,5);
+  const read=await call();assert.equal(read.headers.get('Cache-Control'),'no-store');assert.equal(read.headers.get('Access-Control-Allow-Origin'),env.ALLOWED_ORIGIN);
+  db.close();
+});

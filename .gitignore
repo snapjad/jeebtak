@@ -3,3 +3,6 @@ node_modules/
 *.tar.gz
 *.zip
 .qa/
+.wrangler/
+.dev.vars
+*pairing-secret*

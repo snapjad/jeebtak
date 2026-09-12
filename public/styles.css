@@ -20,3 +20,5 @@ dialog{width:min(540px,calc(100% - 30px));border:1px solid var(--line);border-ra
 .list-item:has(.settle-pick){align-items:center}
 
 .bank-details{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}.bank-details summary{cursor:pointer;min-height:44px;font-size:14px;display:list-item;list-style-position:inside}.bank-details .form-grid,.bank-details .detail-pairs{margin-top:16px}.bank-details .fine{margin-top:14px}.bank-details .check-field{margin-block:10px}
+
+.sync-panel h2{display:flex;gap:10px;align-items:center}.sync-panel .fine{margin-block:14px}.sync-strip{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-inline-start:3px solid var(--pine);padding:10px 14px;margin-bottom:18px;font-size:13px}.sync-panel textarea,dialog textarea{width:100%;font:inherit;font-size:16px;min-height:100px;resize:vertical;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:inherit;overflow-wrap:anywhere}[data-sync-review][hidden]{display:none!important}

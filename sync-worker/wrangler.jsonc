@@ -1,0 +1,10 @@
+{
+  "name": "jeebtak-private-sync",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "vars": {"ALLOWED_ORIGIN": "https://snapjad.github.io"},
+  "durable_objects": {"bindings": [{"name": "WALLET", "class_name": "Wallet"}]},
+  "migrations": [{"tag": "v1", "new_sqlite_classes": ["Wallet"]}],
+  "observability": {"enabled": false}
+}
