@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
   const currencies = ['JOD', 'USD', 'IQD'];
-  const categoryNames = {subscriptions:'اشتراكات',bills:'فواتير',debts:'التزامات',general:'مصاريف عامة',salary:'راتب',other:'دخل إضافي'};
+  const categoryNames = {subscriptions:'اشتراكات',bills:'فواتير',debts:'التزامات',groceries:'أسواق ومواد منزلية',tobacco:'دخان',grooming:'حلاقة وعناية',clothing:'ملابس',fuel:'بنزين ومواصلات',general:'مصاريف أخرى',salary:'راتب',other:'دخل إضافي'};
   const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
   const month = (d=today()) => d.slice(0,7);
   const date = s => new Date(`${s}T12:00:00`);
@@ -57,7 +57,7 @@
   function receiveSalary(s,m=month(),paidDate=today()){const amount=netSalary(s,m);return record(s,{kind:'income',name:'الراتب الصافي',amount,currency:s.salary.currency,date:paidDate,category:'salary',sourceType:'salary',sourceId:'salary',period:m,note:`راتب ${m} بعد الاستقطاعات`});}
   function cancelSubscription(s,id,when=today()){const x=s.subscriptions.find(x=>x.id===id);if(!x)return;x.status='cancelled';x.cancelledDate=when;x.cancelledNextDate=x.nextDate;x.cancelledAmount=x.amount;x.cancelledCurrency=x.currency;x.cancelledCycle=x.cycle;x.cancelledAnchorDay=x.anchorDay;}
   function savings(s,x,until=today()){if(x.status!=='cancelled')return 0;let d=x.cancelledNextDate||x.nextDate,n=0;for(let i=0;d<=until&&i<1200;i++,d=addMonths(d,x.cancelledCycle||x.cycle,x.cancelledAnchorDay||x.anchorDay)){if(d>=(x.cancelledDate||until))n++;}return convert(s,n*(x.cancelledAmount??x.amount),x.cancelledCurrency||x.currency);}
-  function report(s,m){const buckets={subscriptions:0,bills:0,debts:0,general:0};for(const t of s.transactions.filter(t=>t.kind==='expense'&&month(t.date)===m&&t.date<=today()))buckets[t.category in buckets?t.category:'general']+=convert(s,t.amount,t.currency);return buckets;}
+  function report(s,m){const buckets={subscriptions:0,bills:0,debts:0,groceries:0,tobacco:0,grooming:0,clothing:0,fuel:0,general:0};for(const t of s.transactions.filter(t=>t.kind==='expense'&&month(t.date)===m&&t.date<=today()))buckets[t.category in buckets?t.category:'general']+=convert(s,t.amount,t.currency);return buckets;}
   function validate(raw){
     const fail=()=>{throw new Error('النسخة غير صالحة أو من إصدار غير مدعوم. لم تتغيّر بياناتك.');};
     if(!raw||raw.version!==1||!raw.settings||!raw.salary)fail();
