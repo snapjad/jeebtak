@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
   const currencies = ['JOD', 'USD', 'IQD'];
-  const categoryNames = {subscriptions:'اشتراكات',bills:'فواتير',debts:'التزامات',groceries:'أسواق ومواد منزلية',tobacco:'دخان',grooming:'حلاقة وعناية',clothing:'ملابس',fuel:'بنزين ومواصلات',general:'مصاريف أخرى',salary:'راتب',other:'دخل إضافي'};
+  const categoryNames = {subscriptions:'اشتراكات',bills:'فواتير',debts:'التزامات',creditCards:'بطاقات ائتمان',groceries:'أسواق ومواد منزلية',tobacco:'دخان',grooming:'حلاقة وعناية',clothing:'ملابس',fuel:'بنزين ومواصلات',general:'مصاريف أخرى',salary:'راتب',other:'دخل إضافي'};
   const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
   const month = (d=today()) => d.slice(0,7);
   const date = s => new Date(`${s}T12:00:00`);
@@ -13,7 +13,7 @@
   const dueInMonth=(m,day)=>addMonths(`${m}-01`,0,day);
   const uid=()=>globalThis.crypto?.randomUUID?.()||`${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   const round=n=>Math.round((n+Number.EPSILON)*1000000)/1000000;
-  function empty(){return {version:1,updatedAt:new Date().toISOString(),settings:{base:'JOD',rates:{JOD:1,USD:0.709,IQD:0.000541},ratesConfirmed:false,theme:'system',reminderDays:3,notifications:true,openingAmount:0,openingCurrency:'JOD',openingDate:today(),pin:null},salary:{amount:0,currency:'JOD',payDay:25,deductions:[]},subscriptions:[],bills:[],debts:[],transactions:[]};}
+  function empty(){return {version:1,updatedAt:new Date().toISOString(),settings:{base:'JOD',rates:{JOD:1,USD:0.709,IQD:0.000541},ratesConfirmed:false,theme:'system',reminderDays:3,notifications:true,openingAmount:0,openingCurrency:'JOD',openingDate:today(),pin:null},salary:{amount:0,currency:'JOD',payDay:25,deductions:[]},subscriptions:[],bills:[],debts:[],creditCards:[],transactions:[]};}
   function convert(s,amount,currency,to=s.settings.base){return round(Number(amount)*s.settings.rates[currency]/s.settings.rates[to]);}
   const hasPaid=(s,type,id,period)=>s.transactions.some(t=>t.sourceType===type&&t.sourceId===id&&t.period===period);
   function netSalary(s,m=month()){return Math.max(0,s.salary.amount-s.salary.deductions.filter(d=>d.recurring||d.month===m).reduce((a,d)=>a+d.amount,0));}
@@ -32,8 +32,8 @@
     const balance=convert(s,s.settings.openingAmount,s.settings.openingCurrency)+s.transactions.filter(t=>t.date>=s.settings.openingDate&&t.date<=today()).reduce((a,t)=>a+convert(s,t.amount,t.currency)*(t.kind==='income'?1:-1),0);
     const end=addDays(addMonths(`${m}-01`,1),-1),due=occurrences(s,end);const reserved=due.reduce((a,x)=>a+convert(s,x.amount,x.currency),0);
     const fixed=monthlyFixed(s),totalFixed=Object.values(fixed).reduce((a,n)=>a+n,0),net=convert(s,netSalary(s,m),s.salary.currency);
-    const debtBalance=s.debts.filter(x=>!x.archived&&x.remaining>0).reduce((a,x)=>a+convert(s,x.remaining,x.currency),0);
-    return {income,expense,balance,reserved,available:balance-reserved,fixed,totalFixed,net,ratio:net?totalFixed/net:0,debtBalance,netPosition:balance-debtBalance};
+    const debtBalance=s.debts.filter(x=>!x.archived&&x.remaining>0).reduce((a,x)=>a+convert(s,x.remaining,x.currency),0),cardDebt=s.creditCards.reduce((a,x)=>a+convert(s,x.owed,x.currency),0);
+    return {income,expense,balance,reserved,available:balance-reserved,fixed,totalFixed,net,ratio:net?totalFixed/net:0,debtBalance,cardDebt,netPosition:balance-debtBalance-cardDebt};
   }
   function record(s,t){if(t.sourceType&&hasPaid(s,t.sourceType,t.sourceId,t.period))throw new Error('هذه الدفعة مسجّلة بالفعل.');if(!Number.isFinite(t.amount)||t.amount<=0)throw new Error('أدخل مبلغاً أكبر من صفر.');if(!validDate(t.date)||t.date>today())throw new Error('تاريخ الدفع يجب أن يكون اليوم أو قبله.');if(!currencies.includes(t.currency))throw new Error('العملة غير مدعومة.');const entry={id:uid(),...t};s.transactions.unshift(entry);return entry;}
   function pay(s,o,amount=o.amount,paidDate=today(),remainingAfter){
@@ -58,17 +58,18 @@
   function receiveSalary(s,m=month(),paidDate=today()){const amount=netSalary(s,m);return record(s,{kind:'income',name:'الراتب الصافي',amount,currency:s.salary.currency,date:paidDate,category:'salary',sourceType:'salary',sourceId:'salary',period:m,note:`راتب ${m} بعد الاستقطاعات`});}
   function cancelSubscription(s,id,when=today()){const x=s.subscriptions.find(x=>x.id===id);if(!x)return;x.status='cancelled';x.cancelledDate=when;x.cancelledNextDate=x.nextDate;x.cancelledAmount=x.amount;x.cancelledCurrency=x.currency;x.cancelledCycle=x.cycle;x.cancelledAnchorDay=x.anchorDay;}
   function savings(s,x,until=today()){if(x.status!=='cancelled')return 0;let d=x.cancelledNextDate||x.nextDate,n=0;for(let i=0;d<=until&&i<1200;i++,d=addMonths(d,x.cancelledCycle||x.cycle,x.cancelledAnchorDay||x.anchorDay)){if(d>=(x.cancelledDate||until))n++;}return convert(s,n*(x.cancelledAmount??x.amount),x.cancelledCurrency||x.currency);}
-  function report(s,m){const buckets={subscriptions:0,bills:0,debts:0,groceries:0,tobacco:0,grooming:0,clothing:0,fuel:0,general:0};for(const t of s.transactions.filter(t=>t.kind==='expense'&&month(t.date)===m&&t.date<=today()))buckets[t.category in buckets?t.category:'general']+=convert(s,t.amount,t.currency);return buckets;}
+  function report(s,m){const buckets={subscriptions:0,bills:0,debts:0,creditCards:0,groceries:0,tobacco:0,grooming:0,clothing:0,fuel:0,general:0};for(const t of s.transactions.filter(t=>t.kind==='expense'&&month(t.date)===m&&t.date<=today()))buckets[t.category in buckets?t.category:'general']+=convert(s,t.amount,t.currency);return buckets;}
   function validate(raw){
     const fail=()=>{throw new Error('النسخة غير صالحة أو من إصدار غير مدعوم. لم تتغيّر بياناتك.');};
     if(!raw||raw.version!==1||!raw.settings||!raw.salary)fail();
-    const s=JSON.parse(JSON.stringify(raw));const str=v=>typeof v==='string'&&v.length<=1000;const num=v=>Number.isFinite(v)&&v>=0&&v<=1e12;const positive=v=>num(v)&&v>0;const curr=v=>currencies.includes(v);const day=v=>Number.isInteger(v)&&v>=1&&v<=31;const rem=v=>Number.isInteger(v)&&v>=0&&v<=90;
+    const s=JSON.parse(JSON.stringify(raw));if(!Array.isArray(s.creditCards))s.creditCards=[];const str=v=>typeof v==='string'&&v.length<=1000;const num=v=>Number.isFinite(v)&&v>=0&&v<=1e12;const positive=v=>num(v)&&v>0;const curr=v=>currencies.includes(v);const day=v=>Number.isInteger(v)&&v>=1&&v<=31;const rem=v=>Number.isInteger(v)&&v>=0&&v<=90;
     if(!curr(s.settings.base)||!curr(s.settings.openingCurrency)||!Number.isFinite(s.settings.openingAmount)||Math.abs(s.settings.openingAmount)>1e12||!validDate(s.settings.openingDate)||(s.settings.trackingDate!==undefined&&!validDate(s.settings.trackingDate))||!['system','light','dark'].includes(s.settings.theme)||!rem(s.settings.reminderDays)||typeof s.settings.notifications!=='boolean'||!s.settings.rates||!currencies.every(c=>positive(s.settings.rates[c]))||s.settings.rates.JOD!==1)fail();
     // Backups never carry a PIN lock into a new device.
     s.settings.pin=null;
     if(!num(s.salary.amount)||!curr(s.salary.currency)||!day(s.salary.payDay)||!Array.isArray(s.salary.deductions)||s.salary.deductions.length>1000)fail();
     for(const d of s.salary.deductions)if(!str(d.id)||!str(d.name)||!num(d.amount)||typeof d.recurring!=='boolean'||!validDate(`${d.month}-01`))fail();
     const ids=new Set();
+    for(const x of s.creditCards){if(!str(x.id)||!x.id||ids.has(x.id)||!str(x.name)||!curr(x.currency)||!positive(x.limit)||!num(x.owed)||!day(x.dueDay)||!Array.isArray(x.entries)||x.entries.length>25000)fail();ids.add(x.id);for(const e of x.entries)if(!str(e.id)||!['charge','payment'].includes(e.kind)||!positive(e.amount)||!validDate(e.date)||!str(e.note||'')||(e.transactionId!==undefined&&!str(e.transactionId)))fail();}
     for(const type of ['subscriptions','bills','debts','transactions']){if(!Array.isArray(s[type])||s[type].length>25000)fail();for(const x of s[type]){if(!str(x.id)||!x.id||ids.has(x.id)||!str(x.name)||!curr(x.currency))fail();ids.add(x.id);if(type==='subscriptions'){if(!positive(x.amount)||![1,3,6,12].includes(x.cycle)||!validDate(x.nextDate)||!day(x.anchorDay)||!['active','paused','cancelled'].includes(x.status)||!rem(x.reminder)||!str(x.category)||!validDate(x.lastUsed)|| (x.lastPaid&&!validDate(x.lastPaid)) || (x.cancelledDate&&!validDate(x.cancelledDate)) || (x.cancelledNextDate&&!validDate(x.cancelledNextDate)) || (x.cancelledAmount!==undefined&&!num(x.cancelledAmount)) || (x.cancelledCurrency!==undefined&&!curr(x.cancelledCurrency)) || (x.cancelledCycle!==undefined&&![1,3,6,12].includes(x.cancelledCycle)) || (x.cancelledAnchorDay!==undefined&&!day(x.cancelledAnchorDay)))fail();}else if(type==='transactions'){if(!positive(x.amount)||!validDate(x.date)||!['income','expense'].includes(x.kind)||!(x.category in categoryNames)||!str(x.note||'')||x.sourceType&&(!['salary','subscriptions','bills','debts'].includes(x.sourceType)||!str(x.sourceId)||!str(x.period)))fail();}else {if(!validDate(x.startDate)||!day(x.dueDay)||!rem(x.reminder)||typeof x.archived!=='boolean')fail();if(x.settledThrough!==undefined&&!(str(x.settledThrough)&&/^\d{4}-\d{2}$/.test(x.settledThrough)&&validDate(`${x.settledThrough}-01`)))fail();if(type==='bills'&&!positive(x.amount))fail();if(type==='debts'&&(!positive(x.total)||!num(x.remaining)||x.remaining>x.total||!positive(x.installment)))fail();}}}
     for(const x of s.debts){if(x.bank!==undefined){const b=x.bank;if(!b||typeof b!=='object'||!num(b.paidPercent)||b.paidPercent>100||!validDate(b.endDate)||b.endDate<x.startDate||!Number.isInteger(b.termMonths)||b.termMonths<1||b.termMonths>1200||!num(b.apr)||b.apr>100||!num(b.interest)||!num(b.fees)||!positive(b.lastInstallment))fail();}}
     for(const t of s.transactions){if(t.debtReduction!==undefined&&(!num(t.debtReduction)||t.debtReduction>t.amount+0.000001||t.sourceType!=='debts'))fail();}

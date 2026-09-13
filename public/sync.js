@@ -7,7 +7,7 @@
   function sort(x){if(Array.isArray(x))return x.map(sort);if(x&&typeof x==='object')return Object.fromEntries(Object.keys(x).sort().map(k=>[k,sort(x[k])]));return x;}
   function project(s){const out=copy(s);delete out.updatedAt;delete out.settings.pin;delete out.settings.theme;return out;}
   const same=(a,b)=>canonical(a)===canonical(b);
-  const emptyFinance=s=>!s.transactions.length&&!s.subscriptions.length&&!s.bills.length&&!s.debts.length&&!s.salary.amount&&!s.salary.deductions.length&&!Number(s.settings.openingAmount);
+  const emptyFinance=s=>!s.transactions.length&&!s.subscriptions.length&&!s.bills.length&&!s.debts.length&&!s.creditCards.length&&!s.salary.amount&&!s.salary.deductions.length&&!Number(s.settings.openingAmount);
   function encode(bytes){let s='';for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
   function decode(s){if(typeof s!=='string'||!/^[\w-]+$/.test(s))throw Error('رمز الربط غير صالح.');return Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));}
   async function keys(secret){const bytes=decode(secret);if(bytes.length!==32)throw Error('مفتاح المحفظة غير صالح.');const material=await crypto.subtle.importKey('raw',bytes,'HKDF',false,['deriveBits','deriveKey']);const params=label=>({name:'HKDF',hash:'SHA-256',salt:new TextEncoder().encode('jeebtak-sync-v1'),info:new TextEncoder().encode(label)});return {aes:await crypto.subtle.deriveKey(params('encryption'),material,{name:'AES-GCM',length:256},false,['encrypt','decrypt']),token:encode(new Uint8Array(await crypto.subtle.deriveBits(params('authentication'),material,256)))};}
