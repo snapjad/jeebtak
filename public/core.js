@@ -31,7 +31,8 @@
     const balance=convert(s,s.settings.openingAmount,s.settings.openingCurrency)+s.transactions.filter(t=>t.date>=s.settings.openingDate&&t.date<=today()).reduce((a,t)=>a+convert(s,t.amount,t.currency)*(t.kind==='income'?1:-1),0);
     const end=addDays(addMonths(`${m}-01`,1),-1),due=occurrences(s,end);const reserved=due.reduce((a,x)=>a+convert(s,x.amount,x.currency),0);
     const fixed=monthlyFixed(s),totalFixed=Object.values(fixed).reduce((a,n)=>a+n,0),net=convert(s,netSalary(s,m),s.salary.currency);
-    return {income,expense,balance,reserved,available:balance-reserved,fixed,totalFixed,net,ratio:net?totalFixed/net:0};
+    const debtBalance=s.debts.filter(x=>!x.archived&&x.remaining>0).reduce((a,x)=>a+convert(s,x.remaining,x.currency),0);
+    return {income,expense,balance,reserved,available:balance-reserved,fixed,totalFixed,net,ratio:net?totalFixed/net:0,debtBalance,netPosition:balance-debtBalance};
   }
   function record(s,t){if(t.sourceType&&hasPaid(s,t.sourceType,t.sourceId,t.period))throw new Error('هذه الدفعة مسجّلة بالفعل.');if(!Number.isFinite(t.amount)||t.amount<=0)throw new Error('أدخل مبلغاً أكبر من صفر.');if(!validDate(t.date)||t.date>today())throw new Error('تاريخ الدفع يجب أن يكون اليوم أو قبله.');if(!currencies.includes(t.currency))throw new Error('العملة غير مدعومة.');const entry={id:uid(),...t};s.transactions.unshift(entry);return entry;}
   function pay(s,o,amount=o.amount,paidDate=today(),remainingAfter){

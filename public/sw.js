@@ -1,6 +1,6 @@
 /* Only application assets are cached. Financial data stays in localStorage. */
 'use strict';
-const CACHE='jeebtak-app-v7';
+const CACHE='jeebtak-app-v8';
 const ASSETS=['./','./index.html','./styles.css','./core.js','./app.js','./sync.js','./manifest.json','./assets/wallet-hero.svg','./assets/subscriptions.svg','./assets/bills.svg','./assets/salary.svg','./assets/debt.svg','./assets/app-icon.svg','./assets/apple-touch-icon.png','./assets/icon-192.png','./assets/icon-512.png','./assets/readex-0.ttf','./assets/readex-1.ttf','./assets/readex-2.ttf','./assets/readex-3.ttf'];
 self.addEventListener('install',event=>{event.waitUntil((async()=>{
   // Bypass HTTP's older script copies. Activate only after the entire offline
